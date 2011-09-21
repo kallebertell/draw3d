@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application 
+	xmlns:mx="http://www.adobe.com/2006/mxml"
+	xmlns:draw3d="com.kerebus.draw3d.*"
+	xmlns:c="com.kerebus.draw3d.component.*"
+	xmlns:m="com.kerebus.draw3d.model.*" 
+	layout="absolute"
+	horizontalScrollPolicy="off"
+	verticalScrollPolicy="off"
+	applicationComplete="onApplicationComplete()" >
+	<mx:Script>
+		<![CDATA[
+			import com.kerebus.draw3d.command.RotateToPresetCommand;
+			import org.papervision3d.core.log.PaperTraceLogger;
+			import mx.managers.CursorManager;
+		
+		import com.kerebus.draw3d.event.Draw3dEvent;
+		import com.kerebus.draw3d.mouse.MouseInfo;
+		import com.kerebus.draw3d.mouse.MouseObserver;
+		import com.kerebus.draw3d.tool.Tools;
+		import com.kerebus.draw3d.command.RotateCommand;		
+		import com.kerebus.draw3d.KeyboardSceneRotator;
+		import com.kerebus.draw3d.command.DrawCommandEvent;
+		import com.kerebus.draw3d.command.LineStroke;
+		import com.kerebus.draw3d.command.DoNothing;
+		import com.kerebus.draw3d.command.PenStroke;
+		import com.kerebus.draw3d.command.IDrawCommand;
+		import com.kerebus.draw3d.engine.Point3d;
+		import com.kerebus.draw3d.engine.Graphics3d;
+		
+		public var g3d : Graphics3d;
+		
+		private var rotator : KeyboardSceneRotator;
+		
+		private var currentCommand : IDrawCommand = DoNothing.INSTANCE;
+		
+		private var commandHistory : Array = [];
+		private var rotateHistory : Array = [];
+		
+		private var _camera : Point3d = new Point3d(0, 0, 750);
+	
+		private var _mouseInfo : MouseInfo = new MouseInfo();
+		
+	
+		public function onApplicationComplete() : void
+		{	
+			g3d = new Graphics3d(view, _camera);
+			g3d.lineStyle(10, 0x333333, 0.5); 
+			g3d.drawPlane(0, 0, 0, 300, 300);
+
+			// We want to create the observer before adding any of our own mouse listeners
+			new MouseObserver(this, _mouseInfo);
+			
+			stage.addEventListener(MouseEvent.MOUSE_DOWN, mouseDown); 
+			stage.addEventListener(MouseEvent.MOUSE_UP, mouseUp); 
+			stage.addEventListener(MouseEvent.MOUSE_MOVE, mouseMove);
+			addEventListener(Event.ENTER_FRAME, enterFrame);
+			
+			rotator = new KeyboardSceneRotator(g3d, stage);
+
+			g3d.lineStyle(toolModel.lineWidth, toolModel.color, toolModel.lineAlpha);
+
+			debugPanel.g3d = g3d;
+
+			toolPanel.addEventListener("bgColorChanged", toolPanel_dbColorChanged);
+			toolPanel.addEventListener("clearScene", toolPanel_clearScene);
+			toolPanel.addEventListener("undo", toolPanel_undo);
+			toolPanel.addEventListener("rotateToFront", toolPanel_rotate);
+			toolPanel.addEventListener("rotateToBack", toolPanel_rotate);
+			toolPanel.addEventListener("shadingChanged", toolPanel_shadingChanged);
+		}
+
+		private function toolPanel_shadingChanged(e:Draw3dEvent) : void 
+		{
+			g3d.shading = e.payload;	
+		}
+
+		private function toolPanel_rotate(e:Draw3dEvent) : void
+		{
+			new RotateToPresetCommand(g3d).execute(e);
+		}
+
+		private function toolPanel_dbColorChanged(e:Draw3dEvent) : void 
+		{
+			this.setStyle("backgroundColor", e.payload.color);
+		}
+
+		private function toolPanel_clearScene(e:Draw3dEvent) : void 
+		{
+			g3d.clear();	
+		}
+		
+		public function toolPanel_undo(e:Event) : void {
+			if (commandHistory.length > 0) 
+			{
+				commandHistory.pop().undo();
+			}
+		}
+
+		public function enterFrame(e : Event) : void
+		{
+			currentCommand.onEnterFrame(e);
+			rotator.onEnterFrame(e);
+		}
+
+		public function mouseDown(e : MouseEvent) : void
+		{
+			if (hitAnyPanel(e.stageX, e.stageY)) {
+				return;				
+			}
+
+			removeFocus();
+							
+			currentCommand = new toolModel.tool.onMouseDownCommand(g3d, _mouseInfo, toolModel);
+			currentCommand.addEventListener(DrawCommandEvent.COMMAND_COMPLETE, resetDrawCommand);
+			
+			if (currentCommand.isSavedInHistory) {
+				commandHistory.push(currentCommand);
+			} else {
+				rotateHistory.push(currentCommand);
+			}
+			
+			currentCommand.onMouseDown(e);
+		}
+
+		private function resetDrawCommand(e:Event) : void 
+		{
+			currentCommand.removeEventListener(DrawCommandEvent.COMMAND_COMPLETE, resetDrawCommand);
+			currentCommand = DoNothing.INSTANCE;
+		}
+
+		public function mouseUp(e : MouseEvent) : void
+		{
+			currentCommand.onMouseUp(e);
+		}
+		
+		public function mouseMove(e : MouseEvent) : void
+		{
+			currentCommand.onMouseMove(e);			
+		}
+				
+		public function hitAnyPanel(x : int, y : int) : Boolean 
+		{
+			for each (var child : DisplayObject	in getChildren()) 
+			{
+				if (child == view) 
+					continue;
+				
+				if (child.hitTestPoint(x, y))
+					return true;	
+			}
+			
+			return false;
+		}
+		
+		public function removeFocus() : void 
+		{
+			this.stage.focus = null;
+		}
+		
+		
+		]]>
+		
+		
+	</mx:Script>
+	
+	<mx:UIComponent id="view" width="100%" height="100%" cacheAsBitmap="false"/>
+	
+	<m:DrawDataModel id="toolModel" />
+	
+	<c:ToolPanel id="toolPanel" model="{toolModel}" />
+
+	<c:DebugPanel id="debugPanel" x="500" />
+	
+</mx:Application>

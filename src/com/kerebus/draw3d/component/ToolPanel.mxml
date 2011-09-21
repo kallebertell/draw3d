@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<c:PanelBase
+	xmlns:c="com.kerebus.draw3d.component.*"
+	xmlns:local="com.kerebus.draw3d.*" 
+	xmlns:mx="http://www.adobe.com/2006/mxml"
+	width="190" height="250">
+
+	<mx:Script>
+		<![CDATA[
+			import com.kerebus.draw3d.command.RotateToPresetCommand;
+			import com.kerebus.draw3d.mouse.Cursor;
+			import mx.managers.CursorManager;
+			import com.kerebus.draw3d.event.Draw3dEvent;
+			import com.kerebus.draw3d.model.DrawDataModel;
+			import com.kerebus.draw3d.tool.Tools;
+
+		[Bindable]
+		public var _model : DrawDataModel;
+		
+		public function set model(value : DrawDataModel) : void
+		{
+			_model = value;
+			colorPicker.selectedColor = _model.color;
+			widthSlider.value = _model.lineWidth;
+			alphaSlider.value = _model.lineAlpha;
+		}
+		
+		public function get model() : DrawDataModel 
+		{
+			return _model;
+		}
+		
+		private function colorPicker_onChange(e:Event) : void 
+		{
+			model.color = colorPicker.selectedColor;
+		}
+		
+		private function bgColorPicker_onChange(e:Event) : void 
+		{
+			dispatchEvent(new Draw3dEvent("bgColorChanged", false, false, {color: bgColorPicker.selectedColor} ));
+		}
+		
+		private function slider_onChange(e:Event) : void 
+		{
+			model.lineWidth = widthSlider.value;
+		}
+		
+		private function alphaSlider_onChange(e:Event) : void 
+		{
+			model.lineAlpha = alphaSlider.value;
+		}
+		
+		private function clearButton_onClick(e:Event) : void 
+		{
+			dispatchEvent(new Draw3dEvent("clearScene"));
+		}
+		
+		private function undoButton_onClick(e:Event) : void 
+		{
+			dispatchEvent(new Draw3dEvent("undo"));
+		}
+		
+		private function penButton_onClick(e:Event) : void 
+		{
+			model.tool = Tools.PEN;
+			updateButtonSelections();
+		}
+		
+		private function tubeButton_onClick(e:Event) : void
+		{
+			model.tool = Tools.TUBE;
+			updateButtonSelections();
+		}
+		
+		private function lineButton_onClick(e:Event) : void
+		{
+			model.tool = Tools.LINE;
+			updateButtonSelections();
+		} 
+		
+		private function rotateButton_onClick(e:Event) : void
+		{
+			model.tool = Tools.ROTATOR;
+			updateButtonSelections();
+		}
+		
+		private function shadingCheckBox_onChange(e:Event) : void 
+		{
+			var event : Draw3dEvent = new Draw3dEvent("shadingChanged");
+			event.payload = shadingCheckBox.selected;
+			dispatchEvent(event);
+		}
+		
+		private function updateButtonSelections() : void
+		{
+			rotateButton.selected = model.tool == Tools.ROTATOR;
+			penButton.selected = model.tool == Tools.PEN;
+			lineButton.selected = model.tool == Tools.LINE;
+			tubeButton.selected = model.tool == Tools.TUBE;
+			
+			CursorManager.removeAllCursors();
+			
+			if (model.tool.customCursor)
+			{
+				Cursor.setCursor(model.tool.customCursor, 2, model.tool.cursorOffsetX, model.tool.cursorOffsetY);
+				Cursor.hideCustomCursor();
+			}
+			
+			if (model.tool == Tools.ROTATOR) {
+				toolStack.selectedIndex = 0;
+			} 
+			
+			if (model.tool == Tools.PEN || model.tool == Tools.LINE || model.tool == Tools.TUBE) {
+				toolStack.selectedIndex = 1;
+			} 
+			
+		}
+		
+		private function rotToFrontButton_onClick(e:Event) : void 
+		{
+			dispatchEvent(new Draw3dEvent("rotateToFront"));			
+		}
+		
+		private function rotToBackButton_onClick(e:Event) : void 
+		{
+			dispatchEvent(new Draw3dEvent("rotateToBack"));			
+		}
+		
+		]]>
+	</mx:Script>
+
+	<mx:HBox>		
+		<mx:VBox>			
+			<mx:Button id="rotateButton" icon="{Tools.ROTATOR.customCursor}" label="Rotate" toggle="true" click="rotateButton_onClick(event)" width="100%"/>	
+			<mx:Button id="penButton" icon="{Tools.PEN.customCursor}" label="Pen" toggle="true" click="penButton_onClick(event)" width="100%" />
+			<mx:Button id="tubeButton" icon="{Tools.TUBE.customCursor}" label="Tube" toggle="true" click="tubeButton_onClick(event)" width="100%" />
+			<mx:Button id="lineButton" icon="{Tools.LINE.customCursor}" label="Line" toggle="true" click="lineButton_onClick(event)" width="100%"/>
+		</mx:VBox>
+
+		<mx:ViewStack id="toolStack" height="100%">
+			<mx:VBox>
+				<mx:Button id="rotToFrontButton" label="Front" click="rotToFrontButton_onClick(event)"/>
+				<mx:Button id="rotToBackButton" label="Back" click="rotToBackButton_onClick(event)"/>
+			</mx:VBox>
+			<mx:VBox>
+				<mx:ColorPicker id="colorPicker"
+					toolTip="Color"
+					selectedColor="0xFF0000"
+					change="colorPicker_onChange(event)" />	
+				<mx:HSlider id="widthSlider" minimum="1" maximum="100"
+					toolTip="Thickness"
+					width="50"
+					value="10" 
+					snapInterval="1"
+					change="slider_onChange(event)"/>
+				<mx:HSlider id="alphaSlider" minimum="0" maximum="1" snapInterval="0.1"
+					toolTip="Alpha"
+					width="50" 
+					value="1"
+					change="alphaSlider_onChange(event)"/>
+			</mx:VBox>
+		</mx:ViewStack>		
+	</mx:HBox>
+	
+	<mx:HRule width="100%" />
+	
+	<mx:HBox>		
+		<mx:Button id="clearButton" label="Clear" click="clearButton_onClick(event)"/>
+		<mx:Button id="undoButton" label="Undo" click="undoButton_onClick(event)"/>	
+	</mx:HBox>
+	
+	<mx:HBox>
+		<mx:Label text="Background:" fontWeight="bold" color="#CCCCCC"/> 
+		<mx:ColorPicker id="bgColorPicker" change="bgColorPicker_onChange(event)" />
+	</mx:HBox>
+
+	<mx:HBox>
+		<mx:Label text="Shading:" fontWeight="bold" color="#CCCCCC"/> 
+		<mx:CheckBox id="shadingCheckBox" selected="true" change="shadingCheckBox_onChange(event)" />
+	</mx:HBox>
+</c:PanelBase>

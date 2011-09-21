@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PanelBase 
+	xmlns="com.kerebus.draw3d.component.*" 
+	xmlns:mx="http://www.adobe.com/2006/mxml"
+	direction="vertical"
+	width="100" height="150"
+	backgroundColor="#FFFFFF"
+	alpha="0.3"
+	enableAlphaFadeOnMouseOver="false"
+	enterFrame="onEnterFrame(event)">
+	<mx:Script>
+		<![CDATA[
+	
+		import mx.utils.StringUtil;
+		import com.kerebus.draw3d.engine.Graphics3d;
+		
+		public var g3d : Graphics3d;
+
+		private var frames : int = 0;
+		private var previousTimer : Number = 0;
+		private var currentTimer : Number = 0;
+
+
+		private function onEnterFrame(e:Event) : void 
+		{
+			frames += 1;
+
+			currentTimer = getTimer();
+			
+			if (currentTimer - previousTimer >= 1000) 
+			{
+				fps.text = Math.round(frames*1000 / (currentTimer-previousTimer)).toString();			
+				previousTimer = currentTimer;			
+				frames = 0;			
+			}			
+
+			updateDebugData();
+		}
+		
+		
+		private function updateDebugData() : void
+		{
+			if (g3d == null)
+				return;
+				
+			linesCnt.text = ""+g3d.lineCount;
+			pointsCnt.text = ""+g3d.pointCount;
+			rotationsCnt.text = ""+g3d.rotationCount;
+		}
+		
+		]]>
+	</mx:Script>
+	
+	
+	<mx:HBox>
+		<mx:Label id="linesLabel" text="Lines:"/>
+		<mx:Text id="linesCnt" /> 
+	</mx:HBox>
+	
+	<mx:HBox>
+		<mx:Label id="pointsLabel" text="Points:" />
+		<mx:Text id="pointsCnt" />
+	</mx:HBox>
+
+	<mx:HBox>
+		<mx:Label id="rotationsLabel" text="Rotations:" />
+		<mx:Text id="rotationsCnt" />
+	</mx:HBox>
+	
+	<mx:HBox>
+		<mx:Label id="fpsLabel" text="Fps:" />
+		<mx:Text id="fps" />
+	</mx:HBox>
+	
+</PanelBase>
